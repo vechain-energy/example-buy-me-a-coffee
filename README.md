@@ -1,33 +1,18 @@
-# Project Setup
+This demo project serves as an example for building a basic dApp for VeChain using dApp-Kit.
 
-```shell
-git init
-npm install --save --dev parcel typescript @types/react @types/react-dom
-npm install --save react react-dom @vechain/dapp-kit-ui @vechain/dapp-kit-react
-```
+It uses as few dependencies as possible, but includes:
 
-Manually add the following files:
+- TypeScript to enhance stability and safety for developers
 
-1. [.gitignore](.gitignore)
-2. [src/index.html](src/index.html)
-3. [src/index.tsx](src/index.tsx)
-4. [src/App.tsx](src/App.tsx)
-5. [src/tsconfig.json](tsconfig.json)
-6. [src/tsconfig.node.json](tsconfig.node.json)
+# Scripts
 
-Then, add the following to the `package.json` under the scripts section:
-
-```json
-    "start": "parcel src/index.html",
-    "build": "parcel build src/index.html"
-```
-
-# Run
+## Run
 
 - Execute `npm start` to run the project.
 - The app can be accessed at http://localhost:1234/
 
-# Build
+## Build
 
 - To build the website, execute `npm run build`.
 - The generated output will be located in the `dist/` directory.
+

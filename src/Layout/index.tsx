@@ -3,10 +3,9 @@ import { APP_TITLE, APP_DESCRIPTION } from '~/config';
 
 export default function Layout() {
     return (
-        <div>
-            <Menu />
-
-            <div style={{ padding: '1rem', display: 'flex', justifyContent: 'center' }}>
+        <div className='space-y-4 p-4'>
+            <div className='flex justify-end'><Menu /></div>
+            <div className='flex justify-center'>
                 <>Welcome to {APP_TITLE}!</>
                 <p>{APP_DESCRIPTION}</p>
             </div>

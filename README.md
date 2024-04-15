@@ -4,6 +4,7 @@ It uses as few dependencies as possible, but includes:
 
 - TypeScript to enhance stability and safety for developers
 - tailwindcss to simplify the initial setup process from an interface perspective
+- @tanstack/react-query to simplified web requests
 
 # Scripts
 

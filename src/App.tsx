@@ -1,7 +1,9 @@
 import { DAppKitProvider } from '@vechain/dapp-kit-react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { NODE_URL, WALLET_CONNECT_PROJECT_ID, APP_TITLE, APP_DESCRIPTION, APP_ICONS } from '~/config';
 import { Helmet } from "react-helmet";
 import Layout from './Layout';
+import BuyCoffee from './BuyCoffee';
 
 // define wallet connect options only in case a project id has been provided
 const walletConnectOptions = !WALLET_CONNECT_PROJECT_ID ? undefined : {
@@ -14,30 +16,37 @@ const walletConnectOptions = !WALLET_CONNECT_PROJECT_ID ? undefined : {
     },
 };
 
+// query client for react-query
+const queryClient = new QueryClient()
+
 export default function App() {
     return (
-        <Provider>
+        <Providers>
             <Helmet>
                 <meta charSet="utf-8" />
                 <title>{APP_TITLE}</title>
             </Helmet>
 
-            <Layout />
-        </Provider>
+            <Layout>
+                <BuyCoffee />
+            </Layout>
+        </Providers>
     )
 }
 
-function Provider({ children }: { children: React.ReactNode }) {
+function Providers({ children }: { children: React.ReactNode }) {
     return (
-        <DAppKitProvider
-            // the network & node to connect to
-            nodeUrl={NODE_URL}
-            // remember last connected address on page reload
-            usePersistence={true}
-            // optionally enable walletConnect, which will be used for mobile wallets
-            walletConnectOptions={walletConnectOptions}
-        >
-            {children}
-        </DAppKitProvider>
+        <QueryClientProvider client={queryClient}>
+            <DAppKitProvider
+                // the network & node to connect to
+                nodeUrl={NODE_URL}
+                // remember last connected address on page reload
+                usePersistence={true}
+                // optionally enable walletConnect, which will be used for mobile wallets
+                walletConnectOptions={walletConnectOptions}
+            >
+                {children}
+            </DAppKitProvider>
+        </QueryClientProvider>
     );
 }

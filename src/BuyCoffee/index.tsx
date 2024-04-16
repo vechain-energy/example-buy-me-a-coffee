@@ -4,6 +4,7 @@ import { useWallet, useConnex } from '@vechain/dapp-kit-react';
 import { useQuery } from '@tanstack/react-query';
 import { clauseBuilder, unitsUtils } from '@vechain/sdk-core';
 import Transaction from './Transaction';
+import Error from '~/common/Error';
 
 type Token = { address: string, symbol: String, name: string, decimals: number }
 
@@ -39,7 +40,7 @@ export default function BuyCoffee() {
 
         try {
             setError('')
-            const { id } = await connex.vendor.sign('tx', [
+            const { txid } = await connex.vendor.sign('tx', [
                 {
                     ...(
                         selectedToken
@@ -50,7 +51,7 @@ export default function BuyCoffee() {
                 }
             ])
                 .request()
-            setTxId(id)
+            setTxId(txid)
         }
         catch (err) {
             setError(String(err))
@@ -106,8 +107,8 @@ export default function BuyCoffee() {
 
             </div>
             {tokenRegistry.isPending && <p>Loading Token Registry...</p>}
-            {Boolean(error) && <p>{error}</p>}
 
+            {Boolean(error) && <Error>{error}</Error>}
             <Transaction txId={txId} />
         </div>
     )

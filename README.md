@@ -3,7 +3,7 @@ This demo project serves as an example for building a basic dApp for VeChain usi
 It uses as few dependencies as possible, but includes:
 
 - TypeScript to enhance stability and safety for developers
-- tailwindcss to simplify the initial setup process from an interface perspective
+- tailwindcss, @headlessui/react, @heroicons/react to simplify the initial setup process from an interface perspective
 - @tanstack/react-query to simplified web requests
 
 # Scripts

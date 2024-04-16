@@ -7,7 +7,8 @@ if(!RECIPIENT_ADDRESS) { throw new Error("RECIPIENT_ADDRESS must be set") }
 export const WALLET_CONNECT_PROJECT_ID = process.env.WALLET_CONNECT_PROJECT_ID ?? "";
 
 // the network to use, based on the node to connect to
-export const NODE_URL = process.env.NODE_URL ?? `https://mainnet.vechain.org`;
+export const NODE_URL = process.env.NODE_URL ?? `https://testnet.vechain.org`;
+export const NETWORK = process.env.NETWORK ?? "test";
 
 // if fee delegation will be used, the url to the delegation service
 export const DELEGATION_URL = process.env.DELEGATION_URL

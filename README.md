@@ -14,6 +14,15 @@ The project demonstrates the following functionalities:
 - Building & Sending Transactions
 - Tracking Transaction Status
 
+Start playing with the project immediately with the following steps:
+
+```shell
+git clone https://github.com/ifavo/example-buy-me-a-coffee.git
+cd example-buy-me-a-coffee
+npm install
+npm start
+```
+
 ## Scripts
 
 ### Run

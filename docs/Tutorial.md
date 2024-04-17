@@ -1,0 +1,147 @@
+# Buy me a Coffee with dApp-Kit
+
+The outcome of this tutorial is a React application capable of identifying a user's wallet, sending tokens, and verifying the transaction on the Vechain network.
+
+You can open the resulting project on GitHub to check on all steps in parallel while reading each section.
+
+Here is the sequence we are building during this Tutorial:
+
+```mermaid
+sequenceDiagram
+participant User
+participant Wallet
+participant App
+participant Blockchain
+participant GitHub
+
+note over User, GitHub: Starting the App
+User->>App: open app
+App->>GitHub: get list of tokens
+GitHub-->>App: list of tokens
+App-->>User: show tokens and form to enter amount
+
+note over User, App: User Login
+User->>App: log in
+App->>Wallet: ask for user verification
+Wallet->>User: verify identity
+User-->>Wallet: approve verification
+Wallet-->>App: verification approved
+App-->>User: show user's wallet address
+
+note over User, Blockchain: Token Transfer
+User->>App: initiate token transfer
+App->>Wallet: request transaction signature
+Wallet->>User: request signature
+User-->>Wallet: provide signature
+Wallet-->>Blockchain: send transaction
+Blockchain-->>Wallet: transaction ID or error message
+Wallet-->>User: show confirmation
+Wallet-->>App: send transaction ID or error message
+
+loop until transaction is confirmed
+  App->>Blockchain: check transaction status
+  Blockchain-->>App: pending, successful, or failed
+end
+
+App-->>User: show transaction result
+```
+
+# Preparation
+
+The tutorial builds upon a pre-established React project that has been set up with popular libraries. It will begin by integrating Vechain-specific modules into this existing project.
+
+- **@vechain/dapp-kit-react** - A collection of React hooks and components designed to facilitate the integration of the dApp kit into React applications.
+- **@vechain/dapp-kit-ui** - A set of UI components aimed at simplifying the process of wallet selection and connection.
+- **@vechain/sdk-core** - A library focused on providing features specific to Vechain.
+- **@vechain/sdk-network** - A library created to streamline communication with Vechain nodes.
+
+Install all these modules with npm:
+
+```shell
+npm install --save @vechain/dapp-kit-react @vechain/dapp-kit-ui @vechain/sdk-core @vechain/sdk-network
+```
+
+## Integrating the dApp-Kit
+
+> You can read more about the dApp-Kit in their [docs section](https://docs.vechain.org/developer-resources/sdks-and-providers/dapp-kit/dapp-kit-1).
+
+To connect your application to Vechain you will wrap it into a provider that will share a single connection and user authentification globally.
+
+In our example app, this is done within the [`App.tsx`](https://github.com/ifavo/example-buy-me-a-coffee/blob/main/src/App.tsx).
+
+Import the Provider:
+```tsx
+import { DAppKitProvider } from '@vechain/dapp-kit-react';
+```
+
+And wrap your content with it:
+```tsx
+    <DAppKitProvider
+        // the network & node to connect to
+        nodeUrl="https://testnet.vechain.org
+        genesis="test"
+
+        // remember last connected address on page reload
+        usePersistence={true}
+    >
+        {children}
+    </DAppKitProvider>
+```
+
+Consequently, you will have the capability to utilize functions such as `useWallet()` for user identification or `useConnex()` for interacting with Vechain.
+
+## Integrating `useQuery`
+
+By using [`@tanstack/react-query`](https://tanstack.com/query/latest), we will access vechain nodes directly to retrieve some data from the public infrastructure. Just like with dApp-Kit, you need a provider that enables shared fetch and cache management.
+
+Import the Provider and establish a default client configuration:
+
+```tsx
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+const queryClient = new QueryClient()
+
+```
+
+And wrap your dApp-Kit Provider with it:
+
+```tsx
+  <QueryClientProvider client={queryClient}>
+    <DAppKitProvider>
+      ..
+    </DAppKitProvider>
+  </QueryClientProvider>
+```
+
+
+## Authentification
+
+The entire authentication procedure is contained within a React component offered by the dApp-Kit.
+
+The [`WalletButton`](https://docs.vechain.org/developer-resources/sdks-and-providers/dapp-kit/dapp-kit-1/react/usage#walletbutton) generates a button that prompts for connection or displays the address of the signed-in user.
+
+By using this feature, our streamlined Menu will present either a connect button or the user's address within this one component.
+
+```tsx
+import { WalletButton } from "@vechain/dapp-kit-react";
+
+export default function LayoutMenu() {
+    return (
+        <WalletButton />
+    )
+}
+```
+
+By utilizing the [`useWallet()`](https://docs.vechain.org/developer-resources/sdks-and-providers/dapp-kit/dapp-kit-1/react/usage#usewallet) hook, we can already make use of the dApp-Kit's functionality to display a hint for signing in within our primary component.
+
+```tsx
+import { useWallet } from '@vechain/dapp-kit-react';
+export default function BuyCoffee() {
+    // get the connected wallet
+    const { account } = useWallet();
+
+    // if there is no wallet connected, ask the user to connect first
+    if (!account) { return 'Please connect your wallet to continue.' }
+
+    return 'Placeholder'
+}
+```

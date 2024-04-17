@@ -1,5 +1,5 @@
 import React from 'react';
-import { APP_TITLE, RECIPIENT_ADDRESS } from '~/config';
+import { APP_TITLE, RECIPIENT_ADDRESS, NETWORK } from '~/config';
 import { useWallet, useConnex } from '@vechain/dapp-kit-react';
 import { useQuery } from '@tanstack/react-query';
 import { clauseBuilder, unitsUtils } from '@vechain/sdk-core';
@@ -18,7 +18,7 @@ export default function BuyCoffee() {
     // fetch the token registry, to display a list of tokens
     const tokenRegistry = useQuery<Token[]>({
         queryKey: ['tokenRegistry'],
-        queryFn: async () => fetch('https://vechain.github.io/token-registry/main.json').then((res) => res.json())
+        queryFn: async () => fetch(`https://vechain.github.io/token-registry/${NETWORK}.json`).then((res) => res.json())
     })
 
     // state for the currently selected token
@@ -40,17 +40,30 @@ export default function BuyCoffee() {
 
         try {
             setError('')
-            const { txid } = await connex.vendor.sign('tx', [
+
+            // build a transaction object
+            const tx = connex.vendor.sign('tx', [
                 {
                     ...(
                         selectedToken
+
+                            // the clauseBuilder helps build the data for the transaction
                             ? clauseBuilder.transferToken(selectedToken.address, RECIPIENT_ADDRESS, unitsUtils.parseUnits(amount, selectedToken.decimals))
                             : clauseBuilder.transferVET(RECIPIENT_ADDRESS, unitsUtils.parseVET(amount))
                     ),
+
+                    // an optional comment is shown to the user in the wallet
                     comment: 'Send ' + amount + ' ' + (selectedToken?.symbol ?? 'VET'),
                 }
             ])
-                .request()
+
+                // requesting a specific signer will prevent the user from changing the signer to another wallet than the signed in one, preventing confusion
+                .signer(account)
+
+            // ask the user to sign the transaction
+            const { txid } = await tx.request()
+
+            // the resulting transaction id is stored to check for its status later
             setTxId(txid)
         }
         catch (err) {
@@ -59,10 +72,9 @@ export default function BuyCoffee() {
     }
 
 
-    if (!account) {
-        return 'Please connect your wallet to continue.'
-    }
+    if (!account) { return 'Please connect your wallet to continue.' }
 
+    const canSend = Boolean(account && amount)
     return (
         <div className='space-y-4'>
             <div>Welcome to {APP_TITLE}!</div>
@@ -98,8 +110,8 @@ export default function BuyCoffee() {
 
             <div>
                 <button
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                    disabled={!amount}
+                    className={`w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${!canSend ? 'opacity-25' : ''}`}
+                    disabled={!canSend}
                     onClick={handleSend}
                 >
                     send {amount} {selectedToken?.symbol ?? 'VET'}

@@ -145,3 +145,50 @@ export default function BuyCoffee() {
     return 'Placeholder'
 }
 ```
+
+## Token-Registry
+
+Vechain curates a public repository of tokens on [GitHub](https://github.com/vechain/token-registry) to streamline token interaction within decentralized applications (dApps).
+
+> Developers are welcome to create a pull request to add their tokens to the public registry.
+
+We will utilize it to dynamically retrieve all recognized tokens within the application and enable the user to purchase a coffee using a token of their choosing.
+
+To obtain the list, we will employ the `useQuery()` function:
+
+```tsx
+    // fetch the token registry, to display a list of tokens
+    const tokenRegistry = useQuery({
+        queryKey: ['tokenRegistry'],
+        queryFn: async () => fetch(`https://vechain.github.io/token-registry/main.json`).then((res) => res.json())
+    })
+```
+
+The code snippet retrieves the list and returns its content. `useQuery()` offers useful functionalities such as a loading indicator, error handling, and automated retry attempts.
+
+A loading indicator will be displayed during the loading process:
+
+```tsx
+    if (tokenRegistry.isLoading) {
+        return <IconLoading />
+    }
+```
+
+In order to show the data, it can be presented in a dropdown menu:
+
+```tsx
+        <>
+            <label htmlFor="token" className="sr-only">
+                Token
+            </label>
+            <select
+                name="token"
+                id="token"
+            >
+                <option value="">VET</option>
+                {tokenRegistry.data?.map((token) => (<option key={token.address} value={token.address}>{token.symbol}</option>))}
+            </select>
+        </>
+```
+
+We will display `VET` as a blank choice for utilizing Vechain's native token as a payment option if no token has been chosen. The complete component, along with its state management, can be found in the [`src/BuyCoffee/SelectToken.tsx` file on GitHub](https://github.com/ifavo/example-buy-me-a-coffee/blob/main/src/BuyCoffee/SelectToken.tsx).

@@ -1,12 +1,10 @@
 import React from 'react';
-import { APP_TITLE, RECIPIENT_ADDRESS, NETWORK } from '~/config';
+import { APP_TITLE, RECIPIENT_ADDRESS } from '~/config';
 import { useWallet, useConnex } from '@vechain/dapp-kit-react';
-import { useQuery } from '@tanstack/react-query';
 import { clauseBuilder, unitsUtils } from '@vechain/sdk-core';
 import Transaction from './Transaction';
 import Error from '~/common/Error';
-
-type Token = { address: string, symbol: String, name: string, decimals: number }
+import SelectToken, { type Token } from './SelectToken';
 
 export default function BuyCoffee() {
     // get the connected wallet
@@ -15,18 +13,8 @@ export default function BuyCoffee() {
     // and access to connex for interaction with vechain
     const connex = useConnex()
 
-    // fetch the token registry, to display a list of tokens
-    const tokenRegistry = useQuery<Token[]>({
-        queryKey: ['tokenRegistry'],
-        queryFn: async () => fetch(`https://vechain.github.io/token-registry/${NETWORK}.json`).then((res) => res.json())
-    })
-
     // state for the currently selected token
     const [selectedToken, setSelectedToken] = React.useState<Token | undefined>()
-    const handleSelectToken = (event: React.ChangeEvent<HTMLSelectElement>) => {
-        if (!tokenRegistry.data) { return setSelectedToken(undefined) }
-        setSelectedToken(tokenRegistry.data.find((token: any) => token.address === event.target.value))
-    }
 
     // state for the amount to send
     const [amount, setAmount] = React.useState<string>('')
@@ -91,20 +79,7 @@ export default function BuyCoffee() {
                     onChange={handleChangeAmount}
                 />
                 <div className="absolute inset-y-0 right-0 flex items-center">
-                    <label htmlFor="token" className="sr-only">
-                        Currency
-                    </label>
-                    {tokenRegistry.isSuccess && (
-                        <select
-                            name="token"
-                            id="token"
-                            onChange={handleSelectToken}
-                            className="h-full rounded-md border-0 bg-transparent py-0 pl-2 mr-2 text-gray-500 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm"
-                        >
-                            <option value="">VET</option>
-                            {tokenRegistry.data.map((token: any) => (<option key={token.address} value={token.address}>{token.symbol}</option>))}
-                        </select>
-                    )}
+                    <SelectToken onChange={setSelectedToken} />
                 </div>
             </div>
 
@@ -118,7 +93,6 @@ export default function BuyCoffee() {
                 </button>
 
             </div>
-            {tokenRegistry.isPending && <p>Loading Token Registry...</p>}
 
             {Boolean(error) && <Error>{error}</Error>}
             <Transaction txId={txId} />

@@ -1,5 +1,5 @@
 import React from 'react';
-import { APP_TITLE, RECIPIENT_ADDRESS } from '~/config';
+import { APP_DESCRIPTION, APP_TITLE, RECIPIENT_ADDRESS } from '~/config';
 import { useWallet, useConnex } from '@vechain/dapp-kit-react';
 import { clauseBuilder, unitsUtils } from '@vechain/sdk-core';
 import Transaction from './Transaction';
@@ -29,21 +29,27 @@ export default function BuyCoffee() {
         try {
             setError('')
 
-            // build a transaction object
-            const tx = connex.vendor.sign('tx', [
+            const clauses = [
                 {
                     ...(
+
+                        // if a token was selected, transfer the token
                         selectedToken
 
                             // the clauseBuilder helps build the data for the transaction
                             ? clauseBuilder.transferToken(selectedToken.address, RECIPIENT_ADDRESS, unitsUtils.parseUnits(amount, selectedToken.decimals))
+
+                            // or use the clauseBuilder to transfer VET by default
                             : clauseBuilder.transferVET(RECIPIENT_ADDRESS, unitsUtils.parseVET(amount))
                     ),
 
                     // an optional comment is shown to the user in the wallet
                     comment: 'Send ' + amount + ' ' + (selectedToken?.symbol ?? 'VET'),
                 }
-            ])
+            ]
+
+            // build a transaction for the given clauses
+            const tx = connex.vendor.sign('tx', clauses)
 
                 // requesting a specific signer will prevent the user from changing the signer to another wallet than the signed in one, preventing confusion
                 .signer(account)
@@ -62,11 +68,12 @@ export default function BuyCoffee() {
 
     if (!account) { return 'Please connect your wallet to continue.' }
 
+    // sending is disabled if there is no signed in account or no amount entered
     const canSend = Boolean(account && amount)
     return (
-        <div className='space-y-4'>
-            <div>Welcome to {APP_TITLE}!</div>
-
+        <div className='space-y-4 max-w-lg'>
+            <div className='text-xl font-semibold'>{APP_TITLE}</div>
+            <p>{APP_DESCRIPTION}</p>
 
             <div className="relative mt-2 rounded-md shadow-sm">
                 <input

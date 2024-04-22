@@ -1,8 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { NETWORK } from '~/config';
 import { ArrowPathIcon as IconLoading } from '@heroicons/react/24/outline'
-
-export type Token = { address: string, symbol: String, name: string, decimals: number }
+import type { Token } from './types';
 
 type Props = {
     onChange: (token: Token | undefined) => void

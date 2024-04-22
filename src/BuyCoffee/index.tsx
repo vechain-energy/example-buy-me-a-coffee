@@ -4,7 +4,9 @@ import { useWallet, useConnex } from '@vechain/dapp-kit-react';
 import { clauseBuilder, unitsUtils } from '@vechain/sdk-core';
 import Transaction from './Transaction';
 import Error from '~/common/Error';
-import SelectToken, { type Token } from './SelectToken';
+import SelectToken from './SelectToken';
+import type { Token } from './types';
+import Balance from './Balance';
 
 export default function BuyCoffee() {
     // get the connected wallet
@@ -75,18 +77,24 @@ export default function BuyCoffee() {
             <div className='text-xl font-semibold'>{APP_TITLE}</div>
             <p>{APP_DESCRIPTION}</p>
 
-            <div className="relative mt-2 rounded-md shadow-sm">
-                <input
-                    type="text"
-                    name="amount"
-                    id="amount"
-                    className="block w-full rounded-md border-0 py-1.5 pl-2 pr-24 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
-                    placeholder="0"
-                    autoComplete="off"
-                    onChange={handleChangeAmount}
-                />
-                <div className="absolute inset-y-0 right-0 flex items-center">
-                    <SelectToken onChange={setSelectedToken} />
+            <div>
+                <div className="relative mt-2 rounded-md shadow-sm">
+                    <input
+                        type="text"
+                        name="amount"
+                        id="amount"
+                        className="block w-full rounded-md border-0 py-1.5 pl-2 pr-24 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                        placeholder="0"
+                        autoComplete="off"
+                        value={amount}
+                        onChange={handleChangeAmount}
+                    />
+                    <div className="absolute inset-y-0 right-0 flex items-center">
+                        <SelectToken onChange={setSelectedToken} />
+                    </div>
+                </div>
+                <div className='text-xs text-gray-400 text-right cursor-pointer'>
+                    <Balance token={selectedToken} onClick={setAmount} />
                 </div>
             </div>
 

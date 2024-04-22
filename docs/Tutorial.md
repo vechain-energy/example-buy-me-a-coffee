@@ -195,6 +195,56 @@ In order to show the data, it can be presented in a dropdown menu:
 
 We will display `VET` as a blank choice for utilizing Vechain's native token as a payment option if no token has been chosen. The complete component, along with its state management, can be found in the [`src/BuyCoffee/SelectToken.tsx` file on GitHub](https://github.com/ifavo/example-buy-me-a-coffee/blob/main/src/BuyCoffee/SelectToken.tsx).
 
+## Read Token Balance
+
+To assist users in determining the amount to send, we will retrieve the VET or Token balance of the currently signed-in user.
+
+Utilizing `useConnex()` and `useWallet()`, we will request the account details and present the outcome in a user-friendly manner using `unitsUtil`, a utility function from the Vechain SDK:
+
+```js
+// import hooks
+import { useConnex, useWallet } from '@vechain/dapp-kit-react';
+// ..
+
+// get currently signed in account and the currenct vechain connection
+const { account } = useWallet()
+const connex = useConnex()
+```
+
+Read VET Balance by requesting account details:
+
+```js
+connex.thor.account(account).get()
+    .then(({ balance }) => {
+        console.log('VET Balance:', balance)
+    })
+```
+
+For tokens, we will execute a function on the contract by defining an interface that remains consistent across all tokens.
+
+```js
+connex.thor.account(token.address)
+    .method(
+        {
+            "inputs": [{ "name": "owner", "type": "address" }],
+            "name": "balanceOf",
+            "outputs": [{ "name": "balance", "type": "uint256" }]
+        })
+    .call(account)
+    .then(({ decoded: { balance } }) => {
+        console.log('Token Balance', balance)
+    })
+```
+
+Further details on the [Account Visitor can be found in various sections of the documentation](https://docs.vechain.org/developer-resources/sdks-and-providers/connex/api-specification#account-visitor).
+
+The output of both functions is a BigNumber representation of the value, either in hexadecimal or as a 256-byte integer value that may be challenging for a user to interpret. The `@vechain/sdk-core` library provides `unitsUtils` to convert the balance into a readable format:
+
+- `unitsUtils.formatVET(balance)` transforms the balance into a complete VET number by dividing it by 18 decimal places.
+- `unitsUtils.formatUnits(balance, token.decimals)` converts the balance into a complete number with a specified custom decimal value from the token registry.
+
+For the full implementation of this functionality, refer to [`src/BuyCoffee/Balance.tsx`](https://github.com/ifavo/example-buy-me-a-coffee/blob/main/src/BuyCoffee/Balance.tsx) in the GitHub demonstration project.
+
 ## Prepare Token Sending
 
 The [`@vechain/sdk-core`](https://www.npmjs.com/package/@vechain/sdk-core) library offers tools to easily create blockchain commands.
@@ -242,3 +292,52 @@ Here's what happens during this process:
 2. `request()` asks the user's wallet to get the user's signature for the transaction. This function is async, because it will wait until the wallet interaction is completed.
 3. The wallet shows the transaction details to the user. If the user agrees and signs it, the transaction is forwarded to a Vechain node.
 4. The Vechain node confirms the transaction by returning a transaction ID. This ID can be used to track the transaction's status.
+
+## Track Transaction Status
+
+By utilizing the transaction ID, progress can be monitored through a request for a receipt.
+
+By using the `useQuery()` function, an updated receipt will be retrieved at regular intervals. Given that new blocks are inclued into Vechain approximately every 10 seconds, a transaction is typically included after that time.
+
+Utilizing a public node as a direct method offers an alternative way of connecting to Vechain. Each node offers a public JSON API, which allows for retrieving raw data.
+
+```tsx
+import type { TransactionReceipt } from '@vechain/sdk-network';
+
+// ..
+
+const receipt = useQuery<TransactionReceipt | null>({
+    queryKey: ['transaction', txId],
+    queryFn: async () => fetch(`${NODE_URL}/transactions/${txId}/receipt`).then((res) => res.json()) as Promise<TransactionReceipt | null>,
+    refetchInterval: 7000,
+    placeholderData: (previousData) => previousData,
+    enabled: Boolean(txId) && !hasReceipt
+})
+```
+
+The [`Transaction Receipt`](https://tsdocs.dev/docs/@vechain/sdk-network/1.0.0-beta.3/interfaces/network.TransactionReceipt.html) provides details regarding the fundamental transaction information along with its outcomes. When checking the success of the transaction, we will specifically examine the `reverted` indicator in the receipt.
+
+Initially, before the transaction is confirmed, the receipt will be absent, resulting in three possible states:
+
+1. When no receipt is available, the status is `pending`.
+2. If the receipt is present and the `reverted` flag is marked as `true`, the status is `reverted`.
+3. In case the receipt exists and the `reverted` flag is set to `false`, the status is `success`.
+
+```tsx
+const status = !receipt.data ? 'pending' : receipt.data?.reverted ? 'reverted' : 'success'
+```
+
+A React component displaying status for the user can be found in the sample project at [`src/BuyCoffee/Transaction.tsx`](https://github.com/ifavo/example-buy-me-a-coffee/blob/main/src/BuyCoffee/Transaction.tsx).
+
+# Proof of Concept Completed
+
+The preceding sections have shown a rudimentary application that communicates with Vechain:
+
+- It outlined the process of establishing Vechain Connectivity within a React Application.
+- Demonstrated how to identify a user's wallet address.
+- Utilized the public token registry to show a list Vechain Tokens.
+- Interact with the Blockchain to read an accounts balance or call a contract function and read its reply.
+- Creating transactions to send VET or other ecosystem tokens.
+- Monitored the status of a transaction to confirm its completion.
+
+  

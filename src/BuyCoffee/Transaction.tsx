@@ -4,6 +4,7 @@ import { CheckIcon as IconSuccess, ExclamationTriangleIcon as IconError, ArrowPa
 import { useQuery } from '@tanstack/react-query';
 import { NODE_URL } from '~/config';
 import type { TransactionReceipt } from '@vechain/sdk-network';
+import { useBeats } from '~/hooks/useBeats';
 
 export default function TransactionStatus({ txId }: { txId: string }) {
     // fetch the transaction receipt
@@ -16,6 +17,7 @@ export default function TransactionStatus({ txId }: { txId: string }) {
         placeholderData: (previousData) => previousData,
         enabled: Boolean(txId) && !hasReceipt
     })
+    const txChange = useBeats([txId], NODE_URL)
 
     React.useEffect(() => {
         if (receipt.data) { setHasReceipt(true) }
@@ -27,11 +29,17 @@ export default function TransactionStatus({ txId }: { txId: string }) {
         setHasReceipt(false)
     }, [txId])
 
+    React.useEffect(() => {
+        if (txId && txChange) {
+            receipt.refetch()
+        }
+    }, [txId, txChange, receipt])
+
     const status = !receipt.data ? 'pending' : receipt.data?.reverted ? 'reverted' : 'success'
 
     return (
         <Transition.Root show={open} as={React.Fragment}>
-            <Dialog as="div" className="relative z-10" onClose={() => {}}>
+            <Dialog as="div" className="relative z-10" onClose={() => { }}>
                 <Transition.Child
                     as={React.Fragment}
                     enter="ease-out duration-300"

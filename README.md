@@ -10,7 +10,7 @@ It uses as few dependencies as possible, but includes:
 
 The project demonstrates the following functionalities:
 
-- Signing in with Vechain Certificates
+- Signing in with VeChain Certificates
 - Building & Sending Transactions
 - Tracking Transaction Status
 
@@ -81,7 +81,7 @@ App-->>User: show transaction result
 
 ## Application Structure
 
-At the center is the `<App />` component, which is responsible for rendering both the layout and the application itself. This component is encapsulated by providers designed to establish global connectivity for Vechain and HTTP requests.
+At the center is the `<App />` component, which is responsible for rendering both the layout and the application itself. This component is encapsulated by providers designed to establish global connectivity for VeChain and HTTP requests.
 
 ```
 +---------------------- React -------------------------+

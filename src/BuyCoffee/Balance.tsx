@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Token } from './types';
 import { useConnex, useWallet } from '@vechain/dapp-kit-react';
-import { unitsUtils } from '@vechain/sdk-core';
+import { VET, Units, FixedPointNumber } from '@vechain/sdk-core';
 import type { AccountDetail } from '@vechain/sdk-network';
 
 type Props = {
@@ -19,7 +19,7 @@ export default function Balance({ token, onClick }: Props) {
         if (!token) {
             connex.thor.account(account).get()
                 .then(({ balance }: AccountDetail) => {
-                    setBalance(unitsUtils.formatVET(balance))
+                    setBalance(VET.of(balance).toString())
                 })
                 .catch((error: Error) => {
                     console.error(error)
@@ -35,7 +35,7 @@ export default function Balance({ token, onClick }: Props) {
                     })
                 .call(account)
                 .then(({ decoded: { balance } }: { decoded: { balance: string } }) => {
-                    setBalance(unitsUtils.formatUnits(balance, token.decimals))
+                    setBalance(Units.formatUnits(FixedPointNumber.of(balance), token.decimals).toString())
                 })
                 .catch((error: Error) => {
                     console.error(error)

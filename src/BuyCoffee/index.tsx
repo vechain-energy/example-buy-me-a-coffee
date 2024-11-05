@@ -1,7 +1,7 @@
 import React from 'react';
 import { APP_DESCRIPTION, APP_TITLE, RECIPIENT_ADDRESS } from '~/config';
 import { useWallet, useConnex } from '@vechain/dapp-kit-react';
-import { clauseBuilder, unitsUtils } from '@vechain/sdk-core';
+import { Clause, Address, Units, VET, ABIContract } from '@vechain/sdk-core';
 import Transaction from './Transaction';
 import Error from '~/common/Error';
 import SelectToken from './SelectToken';
@@ -31,6 +31,18 @@ export default function BuyCoffee() {
         try {
             setError('')
 
+            const transferABI = ABIContract.ofAbi([
+                {
+                    "inputs": [
+                        { "name": "recipient", "type": "address" },
+                        { "name": "amount", "type": "uint256" }
+                    ],
+                    "name": "transfer",
+                    "outputs": [{ "name": "", "type": "bool" }],
+                    "stateMutability": "nonpayable",
+                    "type": "function"
+                }
+            ]).getFunction('transfer')
             const clauses = [
                 {
                     ...(
@@ -39,10 +51,10 @@ export default function BuyCoffee() {
                         selectedToken
 
                             // the clauseBuilder helps build the data for the transaction
-                            ? clauseBuilder.transferToken(selectedToken.address, RECIPIENT_ADDRESS, unitsUtils.parseUnits(amount, selectedToken.decimals))
+                            ? Clause.callFunction(Address.of(selectedToken.address), transferABI, [Address.of(RECIPIENT_ADDRESS).toString(), Units.parseUnits(amount, selectedToken.decimals).toString()])
 
                             // or use the clauseBuilder to transfer VET by default
-                            : clauseBuilder.transferVET(RECIPIENT_ADDRESS, unitsUtils.parseVET(amount))
+                            : Clause.transferVET(Address.of(RECIPIENT_ADDRESS), VET.of(amount))
                     ),
 
                     // an optional comment is shown to the user in the wallet

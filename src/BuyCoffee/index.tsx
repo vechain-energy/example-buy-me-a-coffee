@@ -1,6 +1,6 @@
 import React from 'react';
 import { APP_DESCRIPTION, APP_TITLE, RECIPIENT_ADDRESS } from '~/config';
-import { useWallet, useConnex } from '@vechain/dapp-kit-react';
+import { useWallet, useConnex, useSendTransaction } from '@vechain/dapp-kit-react-privy';
 import { Clause, Address, Units, VET, ABIContract } from '@vechain/sdk-core';
 import Transaction from './Transaction';
 import Error from '~/common/Error';
@@ -10,10 +10,25 @@ import Balance from './Balance';
 
 export default function BuyCoffee() {
     // get the connected wallet
-    const { account } = useWallet();
+    const { selectedAddress: account } = useWallet()
 
-    // and access to connex for interaction with vechain
-    const connex = useConnex()
+    const {
+        sendTransaction,
+        txReceipt: txId,
+        status,
+        txReceipt,
+        resetStatus,
+        isTransactionPending,
+        error
+    } = useSendTransaction({
+        signerAccount: account,
+        privyUIOptions: {
+            title: 'Sign to confirm',
+            description:
+                'This is a test transaction performing a transfer of 1 B3TR tokens from your smart account.',
+            buttonText: 'Sign',
+        },
+    });
 
     // state for the currently selected token
     const [selectedToken, setSelectedToken] = React.useState<Token | undefined>()
@@ -23,60 +38,41 @@ export default function BuyCoffee() {
     const handleChangeAmount = async (event: React.ChangeEvent<HTMLInputElement>) => setAmount(event.target.value)
 
     // state for sending status
-    const [txId, setTxId] = React.useState<string>('')
-    const [error, setError] = React.useState<string>('')
     const handleSend = async () => {
         if (!account || !RECIPIENT_ADDRESS) { return }
 
-        try {
-            setError('')
+        const transferABI = ABIContract.ofAbi([
+            {
+                "inputs": [
+                    { "name": "recipient", "type": "address" },
+                    { "name": "amount", "type": "uint256" }
+                ],
+                "name": "transfer",
+                "outputs": [{ "name": "", "type": "bool" }],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            }
+        ]).getFunction('transfer')
+        const clauses = [
+            {
+                ...(
 
-            const transferABI = ABIContract.ofAbi([
-                {
-                    "inputs": [
-                        { "name": "recipient", "type": "address" },
-                        { "name": "amount", "type": "uint256" }
-                    ],
-                    "name": "transfer",
-                    "outputs": [{ "name": "", "type": "bool" }],
-                    "stateMutability": "nonpayable",
-                    "type": "function"
-                }
-            ]).getFunction('transfer')
-            const clauses = [
-                {
-                    ...(
+                    // if a token was selected, transfer the token
+                    selectedToken
 
-                        // if a token was selected, transfer the token
-                        selectedToken
+                        // the clauseBuilder helps build the data for the transaction
+                        ? Clause.callFunction(Address.of(selectedToken.address), transferABI, [Address.of(RECIPIENT_ADDRESS).toString(), Units.parseUnits(amount, selectedToken.decimals).toString()])
 
-                            // the clauseBuilder helps build the data for the transaction
-                            ? Clause.callFunction(Address.of(selectedToken.address), transferABI, [Address.of(RECIPIENT_ADDRESS).toString(), Units.parseUnits(amount, selectedToken.decimals).toString()])
+                        // or use the clauseBuilder to transfer VET by default
+                        : Clause.transferVET(Address.of(RECIPIENT_ADDRESS), VET.of(amount))
+                ),
 
-                            // or use the clauseBuilder to transfer VET by default
-                            : Clause.transferVET(Address.of(RECIPIENT_ADDRESS), VET.of(amount))
-                    ),
+                // an optional comment is shown to the user in the wallet
+                comment: 'Send ' + amount + ' ' + (selectedToken?.symbol ?? 'VET'),
+            }
+        ]
 
-                    // an optional comment is shown to the user in the wallet
-                    comment: 'Send ' + amount + ' ' + (selectedToken?.symbol ?? 'VET'),
-                }
-            ]
-
-            // build a transaction for the given clauses
-            const tx = connex.vendor.sign('tx', clauses)
-
-                // requesting a specific signer will prevent the user from changing the signer to another wallet than the signed in one, preventing confusion
-                .signer(account)
-
-            // ask the user to sign the transaction
-            const { txid } = await tx.request()
-
-            // the resulting transaction id is stored to check for its status later
-            setTxId(txid)
-        }
-        catch (err) {
-            setError(String(err))
-        }
+        await sendTransaction(clauses)
     }
 
 
@@ -121,7 +117,7 @@ export default function BuyCoffee() {
 
             </div>
 
-            {Boolean(error) && <Error>{error}</Error>}
+            {Boolean(error) && <Error>{error?.reason}</Error>}
             <Transaction txId={txId} />
         </div>
     )

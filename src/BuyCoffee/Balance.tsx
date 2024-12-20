@@ -1,6 +1,6 @@
 import React from 'react';
 import type { Token } from './types';
-import { useConnex, useWallet } from '@vechain/dapp-kit-react';
+import { useConnex, useWallet } from '@vechain/dapp-kit-react-privy';
 import { VET, Units, FixedPointNumber } from '@vechain/sdk-core';
 import type { AccountDetail } from '@vechain/sdk-network';
 
@@ -10,12 +10,14 @@ type Props = {
 }
 
 export default function Balance({ token, onClick }: Props) {
-    const { account } = useWallet()
+    const { selectedAddress: account } = useWallet()
     const connex = useConnex()
 
     const [balance, setBalance] = React.useState("0")
 
     React.useEffect(() => {
+        if (!account) { return }
+
         if (!token) {
             connex.thor.account(account).get()
                 .then(({ balance }: AccountDetail) => {

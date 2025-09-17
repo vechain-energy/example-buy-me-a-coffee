@@ -1,8 +1,7 @@
 import React from 'react';
 import type { Token } from './types';
-import { useConnex, useWallet } from '@vechain/dapp-kit-react';
-import { VET, Units, FixedPointNumber } from '@vechain/sdk-core';
-import type { AccountDetail } from '@vechain/sdk-network';
+import { useThor, useWallet } from '@vechain/dapp-kit-react';
+import { VET, Units, FixedPointNumber, Address, ABIItem, ABIFunction } from '@vechain/sdk-core';
 
 type Props = {
     token?: Token
@@ -11,14 +10,16 @@ type Props = {
 
 export default function Balance({ token, onClick }: Props) {
     const { account } = useWallet()
-    const connex = useConnex()
+    const thor = useThor()
 
     const [balance, setBalance] = React.useState("0")
 
     React.useEffect(() => {
+        if (!account) return
+
         if (!token) {
-            connex.thor.account(account).get()
-                .then(({ balance }: AccountDetail) => {
+            thor.accounts.getAccount(Address.of(account))
+                .then(({ balance }) => {
                     setBalance(VET.of(balance).toString())
                 })
                 .catch((error: Error) => {
@@ -26,16 +27,13 @@ export default function Balance({ token, onClick }: Props) {
                 })
         }
         else {
-            connex.thor.account(token.address)
-                .method(
-                    {
-                        "inputs": [{ "name": "owner", "type": "address" }],
-                        "name": "balanceOf",
-                        "outputs": [{ "name": "balance", "type": "uint256" }]
-                    })
-                .call(account)
-                .then(({ decoded: { balance } }: { decoded: { balance: string } }) => {
-                    setBalance(Units.formatUnits(FixedPointNumber.of(balance), token.decimals).toString())
+            thor.contracts.executeCall(
+                token.address,
+                ABIItem.ofSignature(ABIFunction, 'function balanceOf(address owner) view returns (uint256)'),
+                [account]
+            )
+                .then(({ result: { plain: balance } }) => {
+                    setBalance(Units.formatUnits(FixedPointNumber.of(balance as bigint), token.decimals).toString())
                 })
                 .catch((error: Error) => {
                     console.error(error)

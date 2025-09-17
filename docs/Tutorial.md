@@ -63,7 +63,7 @@ npm install --save @vechain/dapp-kit-react @vechain/dapp-kit-ui @vechain/sdk-cor
 
 ## Integrating the dApp-Kit
 
-> You can read more about the dApp-Kit in their [docs section](https://docs.vechain.org/developer-resources/sdks-and-providers/dapp-kit/dapp-kit-1).
+> You can read more about the dApp-Kit in their [docs section](https://docs.vechain.org/developer-resources/sdks-and-providers/dapp-kit/dapp-kit-2).
 
 To connect your application to Vechain you will wrap it into a provider that will share a single connection and user authentification globally.
 
@@ -80,8 +80,7 @@ And wrap your content with it:
 ```tsx
     <DAppKitProvider
         // the network & node to connect to
-        nodeUrl="https://testnet.vechain.org
-        genesis="test"
+        node="https://testnet.vechain.org
 
         // remember last connected address on page reload
         usePersistence={true}
@@ -199,49 +198,50 @@ We will display `VET` as a blank choice for utilizing Vechain's native token as 
 
 To assist users in determining the amount to send, we will retrieve the VET or Token balance of the currently signed-in user.
 
-Utilizing `useConnex()` and `useWallet()`, we will request the account details and present the outcome in a user-friendly manner using `unitsUtil`, a utility function from the Vechain SDK:
+Utilizing `useThor()` and `useWallet()`, we will request the account details and present the outcome in a user-friendly manner using `unitsUtil`, a utility function from the Vechain SDK:
 
 ```js
 // import hooks
-import { useConnex, useWallet } from '@vechain/dapp-kit-react';
+import { useThor, useWallet } from '@vechain/dapp-kit-react';
+
+// import SDK helpers
+import { VET, Units, FixedPointNumber, Address, ABIItem, ABIFunction } from '@vechain/sdk-core';
+
 // ..
 
 // get currently signed in account and the currenct vechain connection
 const { account } = useWallet()
-const connex = useConnex()
+const thor = useThor()
 ```
 
 Read VET Balance by requesting account details:
 
 ```js
-connex.thor.account(account).get()
+thor.accounts.getAccount(Address.of(account))
     .then(({ balance }) => {
-        console.log('VET Balance:', balance)
+        console.log('VET Balance:', VET.of(balance))
     })
 ```
 
 For tokens, we will execute a function on the contract by defining an interface that remains consistent across all tokens.
 
 ```js
-connex.thor.account(token.address)
-    .method(
-        {
-            "inputs": [{ "name": "owner", "type": "address" }],
-            "name": "balanceOf",
-            "outputs": [{ "name": "balance", "type": "uint256" }]
-        })
-    .call(account)
-    .then(({ decoded: { balance } }) => {
+thor.contracts.executeCall(
+    token.address,
+    ABIItem.ofSignature(ABIFunction, 'function balanceOf(address owner) view returns (uint256)'),
+    [account]
+)
+    .then(({ result: { plain: balance } }) => {
         console.log('Token Balance', balance)
     })
 ```
 
-Further details on the [Account Visitor can be found in various sections of the documentation](https://docs.vechain.org/developer-resources/sdks-and-providers/connex/api-specification#account-visitor).
+Further details on the [Account Visitor can be found in various sections of the documentation](https://docs.vechain.org/developer-resources/sdks-and-providers/sdk/thor-client#accounts).
 
 The output of both functions is a BigNumber representation of the value, either in hexadecimal or as a 256-byte integer value that may be challenging for a user to interpret. The `@vechain/sdk-core` library provides `unitsUtils` to convert the balance into a readable format:
 
-- `unitsUtils.formatVET(balance)` transforms the balance into a complete VET number by dividing it by 18 decimal places.
-- `unitsUtils.formatUnits(balance, token.decimals)` converts the balance into a complete number with a specified custom decimal value from the token registry.
+- `VET.of(balance)` transforms the balance into a complete VET number by dividing it by 18 decimal places.
+- `Units.formatUnits(balance, token.decimals)` converts the balance into a complete number with a specified custom decimal value from the token registry.
 
 For the full implementation of this functionality, refer to [`src/BuyCoffee/Balance.tsx`](https://github.com/ifavo/example-buy-me-a-coffee/blob/main/src/BuyCoffee/Balance.tsx) in the GitHub demonstration project.
 
@@ -251,12 +251,11 @@ The [`@vechain/sdk-core`](https://www.npmjs.com/package/@vechain/sdk-core) libra
 
 A "clause" is a single command, similar to a function call, that's included in a transaction. The `clauseBuilder` helps create these commands in a more straightforward way. Additionally, `unitsUtils` helps adjust user inputs to the correct format for the blockchain:
 
-- `unitsUtils.parseVET(amount)` – Since VET tokens are divided into 18 decimal places, this function adjusts the input number to include these decimals, converting it into a format the blockchain can understand.
-- `clauseBuilder.transferVET(recipient, parsedVET)` – This command creates instructions to send VET tokens to another wallet.
-- `unitsUtils.parseUnits(amount, decimals)` – For tokens with a different number of decimal places, this function allows specifying the exact number of decimals to correctly format the amount.
-- `clauseBuilder.transferToken(token, recipient, parsedAmount)` – This command generates instructions to send a specified amount of a particular token to another wallet.
+- `VET.of(amount)` – Since VET tokens are divided into 18 decimal places, this function adjusts the input number to include these decimals, converting it into a format the blockchain can understand.
+- `Clause.transferVET(recipient, parsedVET)` – This command creates instructions to send VET tokens to another wallet.
+- `Units.parseUnits(amount, decimals)` – For tokens with a different number of decimal places, this function allows specifying the exact number of decimals to correctly format the amount.
+- `Clause.callFunction(contractAddres, ABIItem, [params])` – This command generates instructions for a contract, in our case it will instruct the tokens contract to transfer the specified amount to another wallet.
 
-> To explore more about the clauseBuilder and its additional functionalities, check out the [tsdocs](https://tsdocs.dev/docs/@vechain/sdk-core/1.0.0-beta.3/variables/core.clauseBuilder.html).
 
 For our Buy me a Coffee with any token app this will translate into this snippet:
 
@@ -265,11 +264,14 @@ const clauses = [
   // if a token was selected, transfer the token
   selectedToken
     ? // the clauseBuilder helps build the data for the transaction
-      clauseBuilder.transferToken(
-        selectedToken.address,
-        RECIPIENT_ADDRESS,
-        unitsUtils.parseUnits(amount, selectedToken.decimals)
-      )
+    Clause.callFunction(
+        Address.of(selectedToken.address),
+        transferABI,
+        [
+            Address.of(RECIPIENT_ADDRESS).toString(),
+            Units.parseUnits(amount, selectedToken.decimals).toString()
+        ]
+    )
     : // or use the clauseBuilder to transfer VET by default
       clauseBuilder.transferVET(RECIPIENT_ADDRESS, unitsUtils.parseVET(amount)),
 ];
@@ -282,15 +284,12 @@ By adding a `comment` attribute to the clause object, Wallets will display it al
 
 Function calls on the Blockchain are executed by sending a transaction, which incurs a VTHO charge for each action based on the associated workload. To verify its identity, a transaction must be signed with the sender's private key.
 
-After setting up the `DAppKitProvider`, we can use the `useConnex()` hook to connect to Vechain.
-
-To have the user sign and send a transaction, we use `await connex.vendor.sign('tx', clauses).request()`.
+After setting up the `DAppKitProvider`, we can use the `useWallet()` hook to gain access to the connected user and send a transaction.
 
 Here's what happens during this process:
 
-1. `sign('tx', clauses)` creates a transaction object with the specified clauses, using the blockchain settings from `DAppKitProvider`.
-2. `request()` asks the user's wallet to get the user's signature for the transaction. This function is async, because it will wait until the wallet interaction is completed.
-3. The wallet shows the transaction details to the user. If the user agrees and signs it, the transaction is forwarded to a Vechain node.
+1. `signer({ clauses })` creates a transaction object with the specified clauses, using the blockchain settings from `DAppKitProvider`.
+2. The wallet shows the transaction details to the user. If the user agrees and signs it, the transaction is forwarded to a Vechain node.
 4. The Vechain node confirms the transaction by returning a transaction ID. This ID can be used to track the transaction's status.
 
 ## Track Transaction Status
@@ -315,7 +314,7 @@ const receipt = useQuery<TransactionReceipt | null>({
 })
 ```
 
-The [`Transaction Receipt`](https://tsdocs.dev/docs/@vechain/sdk-network/1.0.0-beta.3/interfaces/network.TransactionReceipt.html) provides details regarding the fundamental transaction information along with its outcomes. When checking the success of the transaction, we will specifically examine the `reverted` indicator in the receipt.
+The `Transaction Receipt` provides details regarding the fundamental transaction information along with its outcomes. When checking the success of the transaction, we will specifically examine the `reverted` indicator in the receipt.
 
 Initially, before the transaction is confirmed, the receipt will be absent, resulting in three possible states:
 

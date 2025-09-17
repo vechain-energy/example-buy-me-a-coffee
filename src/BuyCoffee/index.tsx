@@ -1,7 +1,7 @@
 import React from 'react';
 import { APP_DESCRIPTION, APP_TITLE, RECIPIENT_ADDRESS } from '~/config';
-import { useWallet, useConnex } from '@vechain/dapp-kit-react';
-import { Clause, Address, Units, VET, ABIContract } from '@vechain/sdk-core';
+import { useWallet } from '@vechain/dapp-kit-react';
+import { Clause, Address, Units, VET, ABIItem, ABIFunction } from '@vechain/sdk-core';
 import Transaction from './Transaction';
 import Error from '~/common/Error';
 import SelectToken from './SelectToken';
@@ -10,10 +10,7 @@ import Balance from './Balance';
 
 export default function BuyCoffee() {
     // get the connected wallet
-    const { account } = useWallet();
-
-    // and access to connex for interaction with vechain
-    const connex = useConnex()
+    const { account, signer } = useWallet();
 
     // state for the currently selected token
     const [selectedToken, setSelectedToken] = React.useState<Token | undefined>()
@@ -31,18 +28,6 @@ export default function BuyCoffee() {
         try {
             setError('')
 
-            const transferABI = ABIContract.ofAbi([
-                {
-                    "inputs": [
-                        { "name": "recipient", "type": "address" },
-                        { "name": "amount", "type": "uint256" }
-                    ],
-                    "name": "transfer",
-                    "outputs": [{ "name": "", "type": "bool" }],
-                    "stateMutability": "nonpayable",
-                    "type": "function"
-                }
-            ]).getFunction('transfer')
             const clauses = [
                 {
                     ...(
@@ -51,7 +36,19 @@ export default function BuyCoffee() {
                         selectedToken
 
                             // the clauseBuilder helps build the data for the transaction
-                            ? Clause.callFunction(Address.of(selectedToken.address), transferABI, [Address.of(RECIPIENT_ADDRESS).toString(), Units.parseUnits(amount, selectedToken.decimals).toString()])
+                            ? Clause.callFunction(
+
+                                // contract to call
+                                Address.of(selectedToken.address),
+
+                                // function to call
+                                ABIItem.ofSignature(ABIFunction, 'function transfer(address recipient, uint256 amount)'),
+
+                                // function parameters
+                                [
+                                    Address.of(RECIPIENT_ADDRESS).toString(),
+                                    Units.parseUnits(amount, selectedToken.decimals).toString()
+                                ])
 
                             // or use the clauseBuilder to transfer VET by default
                             : Clause.transferVET(Address.of(RECIPIENT_ADDRESS), VET.of(amount))
@@ -62,14 +59,11 @@ export default function BuyCoffee() {
                 }
             ]
 
-            // build a transaction for the given clauses
-            const tx = connex.vendor.sign('tx', clauses)
 
-                // requesting a specific signer will prevent the user from changing the signer to another wallet than the signed in one, preventing confusion
-                .signer(account)
-
-            // ask the user to sign the transaction
-            const { txid } = await tx.request()
+            // requesting a specific signer will prevent the user from changing the signer to another wallet than the signed in one, preventing confusion
+            const txid = await signer.sendTransaction({
+                clauses
+            })
 
             // the resulting transaction id is stored to check for its status later
             setTxId(txid)

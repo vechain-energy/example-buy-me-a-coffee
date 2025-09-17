@@ -1,9 +1,12 @@
+import { type Genesis } from '@vechain/dapp-kit';
 import { DAppKitProvider } from '@vechain/dapp-kit-react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { NODE_URL, NETWORK, WALLET_CONNECT_PROJECT_ID, APP_TITLE, APP_DESCRIPTION, APP_ICONS } from '~/config';
 import { Helmet } from "react-helmet";
 import Layout from './Layout';
 import BuyCoffee from './BuyCoffee';
+import { subscriptions } from '@vechain/sdk-network';
+subscriptions.getBeatSubscriptionUrl("https://testnet.vechain.org")
 
 // define wallet connect options only in case a project id has been provided
 const walletConnectOptions = !WALLET_CONNECT_PROJECT_ID ? undefined : {
@@ -40,7 +43,7 @@ function Providers({ children }: { children: React.ReactNode }) {
             <DAppKitProvider
                 // the network & node to connect to
                 nodeUrl={NODE_URL}
-                genesis={NETWORK}
+                genesis={NETWORK as Genesis}
                 // remember last connected address on page reload
                 usePersistence={true}
                 // optionally enable walletConnect, which will be used for mobile wallets
